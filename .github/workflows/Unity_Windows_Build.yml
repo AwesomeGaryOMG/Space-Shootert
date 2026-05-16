@@ -1,0 +1,46 @@
+name: Unity Windows Build
+
+on:
+  #push:
+  #  branches:
+  #    - main
+  workflow_dispatch:
+
+jobs:
+  buildForWindowsBasedPlatforms:
+    name: Build for StandaloneWindows64
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      
+    steps:
+      - name: Free Disk Space
+        uses: jlumbroso/free-disk-space@main
+        with:
+          # this might remove tools that are actually needed,
+          # if set to "true" but frees about 6 GB
+          tool-cache: false
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+          lfs: true
+      - uses: actions/cache@v5
+        with:
+          path: Library
+          key:
+            Library-StandaloneWindows64
+          restore-keys: |
+            Library-StandaloneWindows64-
+            Library-
+      - uses: game-ci/unity-builder@v5
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        with:
+          unityVersion: 6000.3.15f1
+          targetPlatform: StandaloneWindows64 # Build a Windows 64-bit standalone.
+      - uses: actions/upload-artifact@v7
+        with:
+          name: win
+          path: build
