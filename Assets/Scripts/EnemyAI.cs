@@ -17,6 +17,10 @@ public class EnemyAI : MonoBehaviour
     private Transform player;
     private Rigidbody2D rb;
 
+    [Header("Visual Effects")]
+    public GameObject explosionPrefab;
+    private DamageFlash damageFlash;
+
     void Start()
     {
         // Find the player automatically
@@ -27,6 +31,8 @@ public class EnemyAI : MonoBehaviour
         
         // Initialize the shoot timer
         fireTimer = fireRate;
+
+        damageFlash = GetComponent<DamageFlash>();
     }
 
     void Update()
@@ -69,6 +75,9 @@ public class EnemyAI : MonoBehaviour
             return;
         }
 
+        // ---> NEW: Play enemy shoot sound
+        if (AudioManager.Instance != null) AudioManager.Instance.PlayShootSound();
+
         // Spawn the bullet
         GameObject bullet = Instantiate(bulletPrefab, firePoint.position, transform.rotation);
         Rigidbody2D bulletRb = bullet.GetComponent<Rigidbody2D>();
@@ -85,10 +94,21 @@ public class EnemyAI : MonoBehaviour
     {
         hp -= amount;
         
-        // Add particle effects here later!
+        // Trigger the white flash
+        if (damageFlash != null) damageFlash.Flash();
         
         if (hp <= 0)
         {
+            // Spawn explosion exactly where the enemy is
+            if (explosionPrefab != null)
+            {
+                Instantiate(explosionPrefab, transform.position, Quaternion.identity);
+            }
+
+            // ---> NEW: Play explosion sound
+            if (AudioManager.Instance != null) AudioManager.Instance.PlayExplosionSound();
+
+            if (GameManager.Instance != null) GameManager.Instance.EnemyDefeated();
             Destroy(gameObject); 
         }
     }

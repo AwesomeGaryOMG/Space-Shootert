@@ -16,16 +16,17 @@ public class EnemyBullet : MonoBehaviour
         // Ignore other enemies
         if (hitInfo.CompareTag("Enemy")) return;
 
-        // If it hits the player, deal damage (Assuming your player has a PlayerHealth script)
-        /*
-        PlayerHealth player = hitInfo.GetComponent<PlayerHealth>();
-        if (player != null)
+        // If it hits the player, deal damage
+        if (hitInfo.CompareTag("Player"))
         {
-            player.TakeDamage(damage);
+            PlayerController player = hitInfo.GetComponent<PlayerController>();
+            if (player != null)
+            {
+                player.TakeDamage(damage);
+            }
+            
+            // Destroy the bullet on impact
+            Destroy(gameObject);
         }
-        */
-
-        // Destroy the bullet on impact
-        Destroy(gameObject);
     }
 }

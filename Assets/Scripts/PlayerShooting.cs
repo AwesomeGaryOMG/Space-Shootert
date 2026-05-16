@@ -15,7 +15,12 @@ public class PlayerShooting : MonoBehaviour
 
     void Update()
     {
-        // Change to "Fire1" (Left Click) or keep it as KeyCode.X based on your preference
+        // Don't shoot if weapons are jammed for Level 2!
+        if (GameManager.Instance != null && GameManager.Instance.isWeaponJammed)
+        {
+            return;
+        }
+
         if (Input.GetButton("Fire1") && Time.time >= nextFireTime)
         {
             Shoot();
@@ -26,6 +31,9 @@ public class PlayerShooting : MonoBehaviour
     {
         nextFireTime = Time.time + fireRate;
         float currentDamage = player.GetShipDamage(); // Pulls the scaled damage from Phase 1
+
+        // ---> NEW: Play player shoot sound
+        if (AudioManager.Instance != null) AudioManager.Instance.PlayShootSound();
 
         foreach (Transform firePoint in firePoints)
         {
