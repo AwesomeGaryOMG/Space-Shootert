@@ -30,6 +30,9 @@ public class PlayerController : MonoBehaviour
     public GameObject explosionPrefab;
     private DamageFlash damageFlash;
 
+    [Header("UI References")]
+    public GameObject pauseMenu;
+
     void Start()
     {
         rb = GetComponent<Rigidbody2D>();
@@ -51,6 +54,13 @@ public class PlayerController : MonoBehaviour
         // 3. Exact Shield Regen Math from HTML
         // Recharges proportionally based on the percentage of power routed to Shields
         shield = Mathf.Min(100f, shield + (powerShields / 100f) * 12f * Time.deltaTime);
+
+        // Pause Menu
+        if (Input.GetKey(KeyCode.Escape))
+        {
+            pauseMenu.SetActive(true);
+            Time.timeScale = 0f; // Pause game
+        }
     }
 
     void FixedUpdate()

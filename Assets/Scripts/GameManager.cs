@@ -9,13 +9,13 @@ public class GameManager : MonoBehaviour
     [Header("Level Settings")]
     public int currentLevel = 1;
     public bool isWeaponJammed = false;
-    
+
     [Header("Wave Management")]
     public Transform[] spawnPoints;
     public GameObject scoutEnemyPrefab;
-    public GameObject kamikazeEnemyPrefab; 
-    public GameObject heavyEnemyPrefab;    
-    
+    public GameObject kamikazeEnemyPrefab;
+    public GameObject heavyEnemyPrefab;
+
     private int totalEnemiesToSpawn;
     private int enemiesAlive;
     private bool levelComplete = false;
@@ -23,9 +23,10 @@ public class GameManager : MonoBehaviour
     [Header("UI References")]
     public GameObject gameOverScreen;
     public GameObject levelCompleteScreen;
-    
+    public GameObject pauseMenu;
+
     // <-- Changed from Text to TextMeshProUGUI
-    public TextMeshProUGUI objectiveText; 
+    public TextMeshProUGUI objectiveText;
 
     void Awake()
     {
@@ -42,23 +43,23 @@ public class GameManager : MonoBehaviour
     {
         currentLevel = level;
         levelComplete = false;
-        
-        switch(level)
+
+        switch (level)
         {
             case 1:
                 objectiveText.text = "OBJECTIVE: DESTROY ALL ENEMIES";
                 isWeaponJammed = false;
-                StartCoroutine(SpawnWave(5, scoutEnemyPrefab)); 
+                StartCoroutine(SpawnWave(5, scoutEnemyPrefab));
                 break;
             case 2:
                 objectiveText.text = "OBJECTIVE: WEAPONS JAMMED! SURVIVE & REACH EXIT";
                 isWeaponJammed = true;
-                StartCoroutine(SpawnWave(8, kamikazeEnemyPrefab)); 
+                StartCoroutine(SpawnWave(8, kamikazeEnemyPrefab));
                 break;
             case 3:
                 objectiveText.text = "OBJECTIVE: DEFEAT THE HEAVY FLEET";
                 isWeaponJammed = false;
-                StartCoroutine(SpawnWave(10, heavyEnemyPrefab)); 
+                StartCoroutine(SpawnWave(10, heavyEnemyPrefab));
                 break;
         }
     }
@@ -73,7 +74,7 @@ public class GameManager : MonoBehaviour
             // Pick a random spawn point
             Transform sp = spawnPoints[Random.Range(0, spawnPoints.Length)];
             Instantiate(enemyToSpawn, sp.position, Quaternion.identity);
-            
+
             // Wait a few seconds before spawning the next one
             yield return new WaitForSeconds(2.5f);
         }
@@ -82,7 +83,7 @@ public class GameManager : MonoBehaviour
     public void EnemyDefeated()
     {
         enemiesAlive--;
-        
+
         // Level 1 Win Condition
         if (currentLevel == 1 && enemiesAlive <= 0 && !levelComplete)
         {
@@ -107,5 +108,25 @@ public class GameManager : MonoBehaviour
     {
         Time.timeScale = 1f; // Unpause the game
         UnityEngine.SceneManagement.SceneManager.LoadScene(UnityEngine.SceneManagement.SceneManager.GetActiveScene().buildIndex);
+    }
+
+    public void Pause() // Unused, function duplicate in PlayerController.cs
+    {
+        pauseMenu.SetActive(true);
+        Time.timeScale = 0f; // Pause game
+    }
+
+    public void Continue()
+    {
+        pauseMenu.SetActive(false);
+        Time.timeScale = 1f; // Unpause the game
+    }
+
+    public void Quit()
+    {
+        #if UNITY_EDITOR
+        UnityEditor.EditorApplication.isPlaying = false;
+        #endif
+        UnityEngine.Application.Quit();
     }
 }
