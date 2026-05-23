@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.EventSystems;
 
 public class PlayerShooting : MonoBehaviour
 {
@@ -21,6 +22,12 @@ public class PlayerShooting : MonoBehaviour
             return;
         }
 
+        // ---> NEW: Prevent shooting if clicking on a UI element (like the Pause Menu)
+        if (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject())
+        {
+            return; 
+        }
+
         if (Input.GetButton("Fire1") && Time.time >= nextFireTime)
         {
             Shoot();
@@ -32,7 +39,7 @@ public class PlayerShooting : MonoBehaviour
         nextFireTime = Time.time + fireRate;
         float currentDamage = player.GetShipDamage(); // Pulls the scaled damage from Phase 1
 
-        // ---> NEW: Play player shoot sound
+        // Play player shoot sound
         if (AudioManager.Instance != null) AudioManager.Instance.PlayShootSound();
 
         foreach (Transform firePoint in firePoints)

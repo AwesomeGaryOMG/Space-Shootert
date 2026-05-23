@@ -26,19 +26,38 @@ public class PlayerController : MonoBehaviour
     // ---> NEW: Padding so the ship doesn't hang halfway off screen
     private float screenPadding = 0.5f;
 
+    [Header("Level Boundaries")]
+    public float minX = -15f; // Left wall
+    public float maxX = 15f;  // Right wall
+    public float minY = -5f;  // Bottom wall (Start line)
+    public float maxY = 200f; // Top wall (End of the level)
+
     [Header("Visual Effects")]
     public GameObject explosionPrefab;
-    private DamageFlash damageFlash;
+    public DamageFlash hullFlash;   // For the spaceship
+    public DamageFlash shieldFlash; // For the shield bubble
 
-    [Header("UI References")]
-    public GameObject pauseMenu;
+    public float currentTotalPowerLimit = 100f;
 
     void Start()
     {
         rb = GetComponent<Rigidbody2D>();
         cam = Camera.main;
 
-        damageFlash = GetComponent<DamageFlash>();
+        if (GameManager.Instance != null && GameManager.Instance.isWeaponJammed)
+        {
+            // Level 2 Stealth: Weapons offline, 50/50 split!
+            powerWeapons = 0f;
+            powerEngines = 50f;
+            powerShields = 50f;
+        }
+        else
+        {
+            // Standard Levels: Normal 3-way split (100 / 3)
+            powerWeapons = 33.33f;
+            powerEngines = 33.33f;
+            powerShields = 33.33f;
+        }
     }
 
     void Update()
@@ -54,13 +73,6 @@ public class PlayerController : MonoBehaviour
         // 3. Exact Shield Regen Math from HTML
         // Recharges proportionally based on the percentage of power routed to Shields
         shield = Mathf.Min(100f, shield + (powerShields / 100f) * 12f * Time.deltaTime);
-
-        // Pause Menu
-        if (Input.GetKey(KeyCode.Escape))
-        {
-            pauseMenu.SetActive(true);
-            Time.timeScale = 0f; // Pause game
-        }
     }
 
     void FixedUpdate()
@@ -101,15 +113,10 @@ public class PlayerController : MonoBehaviour
         float angle = Mathf.Atan2(lookDir.y, lookDir.x) * Mathf.Rad2Deg;
         rb.rotation = angle;
 
-        // ---> NEW: Screen Clamping Logic <---
-        // Convert screen edges (0 to 1) into actual game world positions
-        Vector2 minBounds = cam.ViewportToWorldPoint(new Vector2(0, 0)); // Bottom-Left
-        Vector2 maxBounds = cam.ViewportToWorldPoint(new Vector2(1, 1)); // Top-Right
-
-        // Get current position and clamp it between the bounds
+        // ---> NEW: Massive World Clamping Logic <---
         Vector2 clampedPos = rb.position;
-        clampedPos.x = Mathf.Clamp(clampedPos.x, minBounds.x + screenPadding, maxBounds.x - screenPadding);
-        clampedPos.y = Mathf.Clamp(clampedPos.y, minBounds.y + screenPadding, maxBounds.y - screenPadding);
+        clampedPos.x = Mathf.Clamp(clampedPos.x, minX, maxX);
+        clampedPos.y = Mathf.Clamp(clampedPos.y, minY, maxY);
 
         // Apply the clamped position back to the Rigidbody
         rb.position = clampedPos;
@@ -117,16 +124,23 @@ public class PlayerController : MonoBehaviour
 
     // --- EXACT POWER ROUTING LOGIC FROM HTML ---
     // Instantly shifts 10 power to target system, draining others proportionally
+    // --- EXACT POWER ROUTING LOGIC FROM HTML ---
+    // Instantly shifts 10 power to target system, draining others proportionally
     void BoostPower(string system)
     {
+        if (system == "weapons" && GameManager.Instance != null && GameManager.Instance.isWeaponJammed)
+        {
+            return; 
+        }
+
         float amount = 10f;
         
         if (system == "weapons") powerWeapons = Mathf.Min(100f, powerWeapons + amount);
         if (system == "engines") powerEngines = Mathf.Min(100f, powerEngines + amount);
         if (system == "shields") powerShields = Mathf.Min(100f, powerShields + amount);
 
-        // Calculate total routed power and check for overflow
-        float overflow = (powerWeapons + powerEngines + powerShields) - 100f;
+        // ---> CHANGED: Instead of a hard 100f, we use your new growing limit! <---
+        float overflow = (powerWeapons + powerEngines + powerShields) - currentTotalPowerLimit;
 
         if (overflow > 0)
         {
@@ -135,7 +149,6 @@ public class PlayerController : MonoBehaviour
             if (system == "shields") DistributeOverflow(ref powerWeapons, ref powerEngines, overflow);
         }
 
-        // Prevent power going below zero
         powerWeapons = Mathf.Max(0, powerWeapons);
         powerEngines = Mathf.Max(0, powerEngines);
         powerShields = Mathf.Max(0, powerShields);
@@ -164,6 +177,9 @@ public class PlayerController : MonoBehaviour
     // This function must be public so enemy bullets can call it.
     public void TakeDamage(float amount)
     {
+        // Remember if we had a shield BEFORE taking damage
+        bool hitShield = shield > 0;
+
         // 1. Exact HTML logic: Shield absorbs damage first
         if (shield > 0)
         {
@@ -179,30 +195,36 @@ public class PlayerController : MonoBehaviour
             hull -= amount;
         }
 
-        // ---> NEW: Trigger the white flash!
-        if (damageFlash != null) damageFlash.Flash();
-
-        // ---> NEW: Play player hit sound
-        if (AudioManager.Instance != null) AudioManager.Instance.PlayPlayerHitSound();
-
-        // Trigger a heavy camera shake!
-        if (CameraShake.Instance != null)
+        // ---> NEW: Flash the correct sprite AND play the correct sound!
+        if (hitShield)
         {
-            StartCoroutine(CameraShake.Instance.Shake(0.3f, 0.4f));
+            if (shieldFlash != null) shieldFlash.Flash();
+            if (AudioManager.Instance != null) AudioManager.Instance.PlayShieldHitSound();
         }
+        else
+        {
+            if (hullFlash != null) hullFlash.Flash();
+            if (AudioManager.Instance != null) AudioManager.Instance.PlayHullHitSound();
+        }
+
+        // [TEMPORARILY DISABLED] Trigger a heavy camera shake!
+        // if (CameraShake.Instance != null)
+        // {
+        //     StartCoroutine(CameraShake.Instance.Shake(0.15f, 0.1f));
+        // }
 
         // --- LOSE CONDITION CHECK ---
         if (hull <= 0)
         {
             Debug.Log("GAME OVER - Player Destroyed");
 
-            // ---> NEW: Spawn explosion and hide the ship!
+            // Spawn explosion and hide the ship!
             if (explosionPrefab != null)
             {
                 Instantiate(explosionPrefab, transform.position, Quaternion.identity);
             }
             
-            // ---> NEW: Play explosion sound for player death
+            // ---> PLAY EXPLOSION SOUND ON DEATH
             if (AudioManager.Instance != null) AudioManager.Instance.PlayExplosionSound();
             
             GetComponent<SpriteRenderer>().enabled = false;
@@ -216,5 +238,46 @@ public class PlayerController : MonoBehaviour
                 Time.timeScale = 0f; 
             }
         }
+    }
+
+    // =========================================================================
+    //  FINAL ADDITION: Loot Drop & Upgrade System (Rogue-Lite Progression)
+    // =========================================================================
+    public void ApplyPickup(Pickup.PickupType type, float amount)
+    {
+        switch (type)
+        {
+            case Pickup.PickupType.HullRepair:
+                // Health heals the ship instantly
+                hull = Mathf.Min(100f, hull + amount); 
+                break;
+            
+            case Pickup.PickupType.ShieldCell:
+                // Permanently increases the total power pool and the Shield power!
+                currentTotalPowerLimit = Mathf.Min(300f, currentTotalPowerLimit + amount);
+                powerShields = Mathf.Min(100f, powerShields + amount);
+                break;
+            
+            case Pickup.PickupType.WeaponBoost:
+                // Permanently increases the total power pool and Weapon power!
+                currentTotalPowerLimit = Mathf.Min(300f, currentTotalPowerLimit + amount);
+                powerWeapons = Mathf.Min(100f, powerWeapons + amount);
+                break;
+            
+            case Pickup.PickupType.EngineBoost:
+                // Permanently increases the total power pool and Engine power!
+                currentTotalPowerLimit = Mathf.Min(300f, currentTotalPowerLimit + amount);
+                powerEngines = Mathf.Min(100f, powerEngines + amount);
+                break;
+        }
+    }
+
+    // =========================================================================
+    //  KNOCKBACK SYSTEM
+    // =========================================================================
+    public void ApplyKnockback(Vector2 knockbackDirection, float force)
+    {
+        // Instantly spikes the player's custom velocity, pushing them backward!
+        customVelocity += knockbackDirection * force;
     }
 }

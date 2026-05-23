@@ -26,8 +26,8 @@ public class DamageFlash : MonoBehaviour
 
     private IEnumerator FlashRoutine()
     {
-        // Change to white
-        spriteRenderer.color = Color.white;
+        // Change to RED so the ship doesn't look like an invisible block
+        spriteRenderer.color = Color.red; 
         
         // Wait for a tiny fraction of a second
         yield return new WaitForSeconds(0.08f);

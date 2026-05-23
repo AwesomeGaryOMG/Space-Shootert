@@ -18,13 +18,13 @@ public class UIManager : MonoBehaviour
     {
         if (player == null) return;
 
-        // Update Health/Shields (0 to 100 scaled down to 0.0 to 1.0 for UI)
-        hullBar.fillAmount = player.hull / 100f;
-        shieldBar.fillAmount = player.shield / 100f;
+        // Update Health/Shields (Only if the UI element is attached in the Inspector!)
+        if (hullBar != null) hullBar.fillAmount = player.hull / 100f;
+        if (shieldBar != null) shieldBar.fillAmount = player.shield / 100f;
 
-        // Update Power Bars (0 to 100 scaled down to 0.0 to 1.0 for UI)
-        weaponPowerBar.fillAmount = player.powerWeapons / 100f;
-        enginePowerBar.fillAmount = player.powerEngines / 100f;
-        shieldPowerBar.fillAmount = player.powerShields / 100f;
+        // Update Power Bars (Only if the UI element is attached in the Inspector!)
+        if (weaponPowerBar != null) weaponPowerBar.fillAmount = player.powerWeapons / 100f;
+        if (enginePowerBar != null) enginePowerBar.fillAmount = player.powerEngines / 100f;
+        if (shieldPowerBar != null) shieldPowerBar.fillAmount = player.powerShields / 100f;
     }
 }
